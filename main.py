@@ -13,35 +13,42 @@ Crea un endpoint para actualizar una cita existente.
 Crea un endpoint para eliminar una cita por su ID.
     """
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+# from pydantic import BaseModel, Field
 from typing import List, Dict
+from db.modelos.cita import Cita, CitaSinId
 import uuid #para generar id automáticos
+from db.client import db_client
+from db.esquemas.cita import cita_esquema
 
 app = FastAPI()
 
-class CitaSinId(BaseModel):
-    Fecha: str
-    Titulo: str
-    Descripcion: str
+# class CitaSinId(BaseModel):
+#     Fecha: str
+#     Titulo: str
+#     Descripcion: str
 
 
-class Cita(BaseModel):
-    ID: uuid.UUID = Field(default_factory=uuid.uuid4, alias="id")# Utilizamos `Field` con `default_factory` para que el ID se autogenere automáticamente.
-    Fecha: str
-    Titulo: str
-    Descripcion: str
-
-lista_de_citas = []
+# class Cita(BaseModel):
+#     ID: uuid.UUID = Field(default_factory=uuid.uuid4, alias="id")# Utilizamos `Field` con `default_factory` para que el ID se autogenere automáticamente.
+#     Fecha: str
+#     Titulo: str
+#     Descripcion: str
 
 @app.post('/crear_cita', response_model=Cita) # crea nueva cita y la agrega a la lista
 async def crear_cita(nueva_cita:CitaSinId) -> Cita:
-    cita_con_id = Cita(**nueva_cita.dict())
-    lista_de_citas.append(cita_con_id)
-    return cita_con_id
+    #cita_con_id = Cita(**nueva_cita.dict())
+    cita_dict = dict(nueva_cita) # convierto la cita en un diccionario para pasarselo como documento a mongodb, que solo entiende JSON
+    id = db_client.local.citas.insert_one(cita_dict).inserted_id #en esta línea estoy insertando la cita en la base de datos y a la vez quedándome con el id
+    nueva_cita = cita_esquema(db_client.local.citas.find_one({"_id": id})) #esto es un JSON que viene de la bd y hay q transformalo a objeto Cita con función importada desde el módulo esquemas
+    return Cita(**nueva_cita)
 
-@app.get('/', response_model= dict)
-async def observar_lista() -> dict:
-    return {"lista": lista_de_citas}
+@app.get('/', response_model= List[Cita])
+async def observar_total_citas() -> List[Cita]:
+    lista_de_citas = []
+    for doc in db_client.local.citas.find():
+        lista_de_citas.append(cita_esquema(doc))
+    #return lista_de_citas
+    return lista_de_citas
 
 @app.get('/cita_por_id/{id_cita}', response_model=Cita)
 async def devolver_cita_segun_id(id_cita:uuid.UUID) -> Cita:
