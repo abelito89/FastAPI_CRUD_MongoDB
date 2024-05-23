@@ -19,6 +19,7 @@ from db.modelos.cita import Cita, CitaSinId
 import uuid #para generar id automáticos
 from db.client import db_client
 from db.esquemas.cita import cita_esquema
+from bson import ObjectId #para poder convertir los strings id a ObjectId, que son los tipos que tienen los id generados por mongodb
 
 app = FastAPI()
 
@@ -51,18 +52,21 @@ async def observar_total_citas() -> List[Cita]:
     return lista_de_citas
 
 @app.get('/cita_por_id/{id_cita}', response_model=Cita)
-async def devolver_cita_segun_id(id_cita:uuid.UUID) -> Cita:
-    for cita in lista_de_citas:
-        if cita.ID == id_cita:
-            return cita
+async def devolver_cita_segun_id(id_parametro:str) -> Cita:
+    id_cita = ObjectId(id_parametro)
+    cita_encontrada = Cita(**cita_esquema(db_client.local.citas.find_one({"_id": id_cita})))
+    
+    if cita_encontrada:
+        return cita_encontrada 
     raise HTTPException(status_code=404, detail="No se ha encontrado ninguna cita con el ID proporcionado")
 
 @app.put('/actualizar_cita/{id_cita_modificar}', response_model=Cita)
-async def actualizar_cita(id_cita_modificar:uuid.UUID, nueva_cita:CitaSinId) -> Cita:
-    for i,cita in enumerate(lista_de_citas):
-        if cita.ID == id_cita_modificar:
-            cita_modificada = Cita(id = id_cita_modificar, **nueva_cita.dict())
-            lista_de_citas[i] = cita_modificada          
+async def actualizar_cita(id_cita_mod:str, nueva_cita:CitaSinId) -> Cita:
+    id_cita_modificar = ObjectId(id_cita_mod)
+    nueva_cita_dict = dict(nueva_cita)
+    documento_modificado = cita_esquema(db_client.local.citas.find_one_and_replace({"_id": id_cita_modificar}, nueva_cita_dict,return_document=True))
+    cita_modificada = Cita(**documento_modificado)
+    if cita_modificada:             
             return cita_modificada
     raise HTTPException(status_code=404, detail="No se encontró ninguna cita con el ID proporcionado")
     
