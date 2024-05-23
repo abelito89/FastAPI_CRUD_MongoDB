@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-import uuid #para generar id automáticos
 
 class CitaSinId(BaseModel):
     Fecha: str

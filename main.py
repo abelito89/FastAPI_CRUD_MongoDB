@@ -23,18 +23,6 @@ from bson import ObjectId #para poder convertir los strings id a ObjectId, que s
 
 app = FastAPI()
 
-# class CitaSinId(BaseModel):
-#     Fecha: str
-#     Titulo: str
-#     Descripcion: str
-
-
-# class Cita(BaseModel):
-#     ID: uuid.UUID = Field(default_factory=uuid.uuid4, alias="id")# Utilizamos `Field` con `default_factory` para que el ID se autogenere automáticamente.
-#     Fecha: str
-#     Titulo: str
-#     Descripcion: str
-
 @app.post('/crear_cita', response_model=Cita) # crea nueva cita y la agrega a la lista
 async def crear_cita(nueva_cita:CitaSinId) -> Cita:
     #cita_con_id = Cita(**nueva_cita.dict())
@@ -51,7 +39,7 @@ async def observar_total_citas() -> List[Cita]:
     #return lista_de_citas
     return lista_de_citas
 
-@app.get('/cita_por_id/{id_cita}', response_model=Cita)
+@app.get('/cita_por_id/{id_parametro}', response_model=Cita)
 async def devolver_cita_segun_id(id_parametro:str) -> Cita:
     id_cita = ObjectId(id_parametro)
     cita_encontrada = Cita(**cita_esquema(db_client.local.citas.find_one({"_id": id_cita})))
@@ -60,7 +48,7 @@ async def devolver_cita_segun_id(id_parametro:str) -> Cita:
         return cita_encontrada 
     raise HTTPException(status_code=404, detail="No se ha encontrado ninguna cita con el ID proporcionado")
 
-@app.put('/actualizar_cita/{id_cita_modificar}', response_model=Cita)
+@app.put('/actualizar_cita/{id_cita_mod}', response_model=Cita)
 async def actualizar_cita(id_cita_mod:str, nueva_cita:CitaSinId) -> Cita:
     id_cita_modificar = ObjectId(id_cita_mod)
     nueva_cita_dict = dict(nueva_cita)
@@ -70,10 +58,12 @@ async def actualizar_cita(id_cita_mod:str, nueva_cita:CitaSinId) -> Cita:
             return cita_modificada
     raise HTTPException(status_code=404, detail="No se encontró ninguna cita con el ID proporcionado")
     
-@app.delete('/eliminar_cita/{id_cita_eliminar}')
-async def eliminar_cita(id_cita_eliminar:uuid.UUID) -> Dict:
-    for i,cita in enumerate(lista_de_citas):
-        if cita.ID == id_cita_eliminar:
-            del lista_de_citas[i]
-            return {"mensaje":"Cita eliminada exitosamente"}
+@app.delete('/eliminar_cita/{id_cita_eliminar}', response_model=Dict)
+async def eliminar_cita(id_cita_eliminar:str) -> Dict:
+    print("Tipo de dato de id_cita_eliminar:",type(id_cita_eliminar))
+    id_eliminar = ObjectId(id_cita_eliminar)
+    print("Tipo de dato de id_eliminar:",type(id_eliminar))
+    cita_eliminada = db_client.local.citas.find_one_and_delete({"_id": id_eliminar})
+    if cita_eliminada:
+        return {"mensaje":"Cita eliminada exitosamente"}
     raise HTTPException(status_code=404, detail="No se encontró ninguna cita con el ID proporcionado")
