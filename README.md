@@ -1,4 +1,4 @@
-```markdown
+
 # FastAPI CRUD con MongoDB
 
 Este proyecto es una API creada con FastAPI para gestionar una agenda, permitiendo crear, leer, actualizar y eliminar citas almacenadas en una base de datos MongoDB.
@@ -115,4 +115,3 @@ Abre tu navegador y navega a `http://127.0.0.1:8000/docs` para ver la documentac
 ## Repositorio
 
 El código fuente de este proyecto está disponible en [GitHub](https://github.com/abelito89/FastAPI_CRUD_MongoDB.git).
-```
